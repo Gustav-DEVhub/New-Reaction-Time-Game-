@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>REACTION GAME — Reaction Timer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>REACTION GAME</title>
   <link rel="icon" type="image/png" href="/favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -20,26 +20,21 @@
       --muted:   #6B6B80;
       --danger:  #FF3D5A;
       --success: #00E5FF;
-      --font-display: 'Bebas Neue', sans-serif;
-      --font-body:    'DM Sans', sans-serif;
+      --fd: 'Bebas Neue', sans-serif;
+      --fb: 'DM Sans', sans-serif;
     }
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     html, body {
       width: 100%; height: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font-body);
+      background: var(--bg); color: var(--text);
+      font-family: 'DM Sans', sans-serif;
       overflow: hidden;
+      touch-action: manipulation;
     }
 
-    /* Full-page bg canvas */
-    #bg-canvas {
-      position: fixed; inset: 0; z-index: 0;
-    }
+    #bg-canvas { position: fixed; inset: 0; z-index: 0; }
 
-    /* Grain */
     #grain {
       position: fixed; inset: 0; z-index: 1;
       pointer-events: none; opacity: 0.03;
@@ -47,7 +42,6 @@
       background-size: 180px 180px;
     }
 
-    /* Flash */
     #flash {
       position: fixed; inset: 0; z-index: 10;
       pointer-events: none; opacity: 0;
@@ -55,608 +49,422 @@
     }
     #flash.active { opacity: 0.07; }
 
-    /* App shell — grid layout */
+    /* ══════════════════════════════════════
+       APP — vertical flex column, 100dvh
+    ══════════════════════════════════════ */
     #app {
       position: relative; z-index: 2;
-      width: 100%; height: 100vh;
-      display: grid;
-      grid-template-columns: 220px 1fr 220px;
-      grid-template-rows: auto 1fr auto;
-      padding: 20px 24px 18px;
-      gap: 0;
+      width: 100%;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      padding: 12px 16px 10px;
       overflow: hidden;
     }
 
-    /* ── Top-left: logo ── */
-    #logo-block {
-      grid-column: 1; grid-row: 1;
+    /* ── TOP BAR ── */
+    #topbar {
+      flex-shrink: 0;
       display: flex;
-      flex-direction: column;
-      justify-content: flex-start;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 8px;
     }
-
     .logo {
-      font-family: var(--font-display);
-      font-size: clamp(22px, 2.8vw, 36px);
-      letter-spacing: 0.06em;
-      line-height: 1;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(20px, 5.5vw, 38px);
+      letter-spacing: 0.06em; line-height: 1;
     }
     .logo em { color: var(--accent); font-style: normal; }
     .tagline {
-      font-size: 9px;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--muted);
-      font-weight: 500;
-      margin-top: 5px;
+      font-size: 8px; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--muted); margin-top: 3px;
     }
 
-    /* ── Top-center: empty spacer ── */
-    #top-center { grid-column: 2; grid-row: 1; }
+    /* Grid icon — back to intro */
+    #btn-menu {
+      display: none;
+      align-items: center; justify-content: center;
+      width: 36px; height: 36px;
+      border-radius: 8px; border: 1.5px solid var(--border);
+      background: transparent; color: var(--muted);
+      cursor: pointer; flex-shrink: 0;
+      transition: border-color .2s, color .2s, background .2s;
+    }
+    #btn-menu.visible { display: flex; }
+    #btn-menu:hover { border-color: var(--text); color: var(--text); background: var(--surface); }
+    #btn-menu svg { width: 14px; height: 14px; fill: currentColor; }
 
-    /* ── Top-right: score card ── */
-    #score-card {
-      grid-column: 3; grid-row: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 8px;
-    }
-
-    #result-block { text-align: right; }
-    #result-ms {
-      font-family: var(--font-display);
-      font-size: clamp(40px, 5vw, 68px);
-      line-height: 0.88;
-      color: var(--text);
-      transition: color 0.3s ease;
-    }
-    #result-label {
-      font-size: 9px;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-top: 3px;
-    }
-
-    #rating-badge {
-      font-size: 9px;
-      font-weight: 600;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      padding: 3px 10px;
-      border-radius: 100px;
-      border: 1px solid var(--border);
-      color: var(--muted);
-      transition: all 0.4s ease;
-      white-space: nowrap;
-    }
-
-    #score-legend {
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-      align-items: flex-end;
-    }
-    .legend-row {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .legend-dot {
-      width: 5px; height: 5px;
-      border-radius: 50%;
+    /* ── STATS PANEL ── */
+    #stats-strip {
       flex-shrink: 0;
-    }
-    .legend-range {
-      font-family: var(--font-display);
-      font-size: 10px;
-      color: var(--muted);
-      min-width: 48px;
-      text-align: right;
-    }
-    .legend-label {
-      font-size: 8px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--muted);
-      transition: color 0.3s ease;
-      min-width: 58px;
-      text-align: right;
-    }
-    .legend-label.active { color: var(--text); }
-
-    #mini-stats {
       display: flex;
-      gap: 14px;
-    }
-    .mini-stat { text-align: right; }
-    .mini-stat-val {
-      font-family: var(--font-display);
-      font-size: 18px;
-      color: var(--text);
-      transition: color 0.3s ease;
-      line-height: 1;
-    }
-    .mini-stat-val.best-val { color: var(--success); }
-    .mini-stat-label {
-      font-size: 8px;
-      color: var(--muted);
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
+      align-items: stretch;
+      gap: 8px;
+      margin-bottom: 8px;
     }
 
-    #history-pills {
+    /* Left: big live result */
+    #stat-result-block {
       display: flex;
-      gap: 4px;
-      justify-content: flex-end;
-      flex-wrap: wrap;
-      max-width: 210px;
-    }
-    .history-pill {
-      font-family: var(--font-display);
-      font-size: 11px;
-      padding: 2px 7px;
-      border-radius: 4px;
+      flex-direction: column;
+      justify-content: center;
       background: var(--surface);
       border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 14px;
+      min-width: 0;
+      position: relative;
+      overflow: hidden;
+    }
+    #stat-result-block::before {
+      content: '';
+      position: absolute; left: 0; top: 0; bottom: 0; width: 2px;
+      background: var(--muted);
+      transition: background .4s ease;
+    }
+    #stat-result-block.c-accent::before  { background: var(--accent); }
+    #stat-result-block.c-success::before { background: var(--success); }
+    #stat-result-block.c-danger::before  { background: var(--danger); }
+
+    #result-ms {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(28px, 7.5vw, 48px);
+      line-height: 1; color: var(--text); transition: color .3s;
+      letter-spacing: .02em;
+    }
+    #result-unit {
+      font-size: 7px; letter-spacing: .2em;
+      text-transform: uppercase; color: var(--muted); margin-top: 1px;
+    }
+    #rating-badge {
+      font-size: 8px; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted); transition: color .3s;
+      white-space: nowrap; margin-top: 3px;
+    }
+
+    /* Right: session metrics */
+    #mini-stats {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5px;
+    }
+    .mstat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 8px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 1px;
+    }
+    .mstat-val {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(16px, 4vw, 22px);
+      line-height: 1; color: var(--text); transition: color .3s;
+    }
+    .mstat-val.best { color: var(--success); }
+    .mstat-lbl {
+      font-size: 7px; color: var(--muted);
+      letter-spacing: .12em; text-transform: uppercase;
+    }
+
+    /* Score bar — gradient spectrum with animated marker */
+    #score-bar-wrap {
+      position: relative;
+      height: 44px;          /* taller to fit label + marker above bar */
+      display: flex;
+      align-items: flex-end; /* bar sits at the bottom of this space */
+    }
+    #score-bar-track {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 5px;
+      border-radius: 3px;
+      background: linear-gradient(to right,
+        #FF3D5A 0%,
+        #FF8C42 14%,
+        #A0A0B5 28%,
+        #CCCCDD 42%,
+        #00E5FF 57%,
+        #C8FF00 80%,
+        #E8FF80 100%
+      );
+      opacity: 0.25;
+      transition: opacity .5s;
+    }
+    #score-bar-track.active { opacity: 1; }
+
+    /* The whole marker lives in absolute space over the bar */
+    #score-bar-marker {
+      position: absolute;
+      bottom: 0;                    /* anchor to bar bottom */
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: left .65s cubic-bezier(.34,1.56,.64,1), opacity .35s ease;
+    }
+    #score-bar-marker.visible { opacity: 1; }
+
+    /* Floating tier label */
+    #sbm-label {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 11px;
+      letter-spacing: .12em;
+      color: #fff;
+      white-space: nowrap;
+      text-shadow: 0 0 10px currentColor;
+      transition: color .4s;
+      line-height: 1;
+      margin-bottom: 3px;
+    }
+
+    /* Diamond shape */
+    #sbm-diamond {
+      width: 11px; height: 11px;
+      transform: rotate(45deg);
+      border-radius: 2px;
+      background: #fff;
+      border: 1.5px solid rgba(0,0,0,.5);
+      transition: background .4s, box-shadow .4s;
+      box-shadow: 0 0 0 3px rgba(255,255,255,.15);
+      flex-shrink: 0;
+    }
+
+    /* Tick line from diamond down to bar */
+    #sbm-tick {
+      width: 1.5px;
+      height: 8px;
+      background: rgba(255,255,255,.35);
+      transition: background .4s;
+      flex-shrink: 0;
+    }
+
+    /* Labels under bar */
+    #score-bar-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 4px;
+    }
+    .sbl {
+      font-size: 6px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
       color: var(--muted);
-      animation: fadeUp 0.3s ease;
-    }
-    .history-pill.fast { border-color: var(--success); color: var(--success); }
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(5px); }
-      to   { opacity: 1; transform: translateY(0); }
+      opacity: .55;
     }
 
-    /* ── Left col mid: empty ── */
-    #left-mid { grid-column: 1; grid-row: 2; }
-    /* ── Right col mid: empty ── */
-    #right-mid { grid-column: 3; grid-row: 2; }
-
-    /* ── Center: gem box ── */
+    /* ── CENTER: game box fills remaining space ── */
     #center {
-      grid-column: 2; grid-row: 2;
+      flex: 1 1 0;
+      min-height: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 8px 0;
     }
 
     #click-box {
       position: relative;
-      width: min(400px, 56vw, 52vh);
-      aspect-ratio: 1 / 1;
-      border-radius: 24px;
+      /* Square that fits both width and available height */
+      width:  min(100%, calc(100dvh - 190px));
+      height: min(100%, calc(100dvh - 190px));
+      max-width: 460px; max-height: 460px;
+      border-radius: 20px;
       border: 1.5px solid var(--border);
       background: var(--surface);
       overflow: hidden;
       cursor: pointer;
       user-select: none;
       -webkit-tap-highlight-color: transparent;
-      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+      transition: border-color .3s, box-shadow .3s;
     }
 
-    #click-box.state-idle    { border-color: var(--border);  box-shadow: none; }
-    #click-box.state-waiting { border-color: #333344; animation: border-pulse 1.5s ease-in-out infinite; }
-    #click-box.state-go      { border-color: var(--accent);  box-shadow: 0 0 60px rgba(200,255,0,0.3), inset 0 0 40px rgba(200,255,0,0.05); }
-    #click-box.state-early   { border-color: var(--danger);  box-shadow: 0 0 50px rgba(255,61,90,0.35); animation: box-shake 0.45s ease; }
-    #click-box.state-result  { border-color: var(--success); box-shadow: 0 0 45px rgba(0,229,255,0.18); }
+    #click-box.state-idle    { border-color: var(--border); box-shadow: none; }
+    #click-box.state-waiting { border-color: #333344; animation: bpulse 1.5s ease-in-out infinite; }
+    #click-box.state-go      { border-color: var(--accent); box-shadow: 0 0 55px rgba(200,255,0,.28); }
+    #click-box.state-early   { border-color: var(--danger); box-shadow: 0 0 48px rgba(255,61,90,.32); animation: bshake .45s ease; }
+    #click-box.state-result  { border-color: var(--success); box-shadow: 0 0 38px rgba(0,229,255,.18); }
 
-    @keyframes border-pulse {
-      0%,100% { box-shadow: 0 0 12px rgba(200,200,255,0.03); }
-      50%      { box-shadow: 0 0 28px rgba(200,200,255,0.09); }
+    @keyframes bpulse {
+      0%,100% { box-shadow: 0 0 10px rgba(200,200,255,.03); }
+      50%     { box-shadow: 0 0 26px rgba(200,200,255,.09); }
     }
-    @keyframes box-shake {
+    @keyframes bshake {
       0%,100% { transform: translateX(0); }
-      20%  { transform: translateX(-9px); }
-      40%  { transform: translateX(9px); }
-      60%  { transform: translateX(-5px); }
-      80%  { transform: translateX(5px); }
+      20% { transform: translateX(-8px); } 40% { transform: translateX(8px); }
+      60% { transform: translateX(-5px); } 80% { transform: translateX(5px); }
     }
 
-    /* Scanline CRT overlay */
     #click-box::after {
-      content: '';
-      position: absolute; inset: 0; z-index: 5;
-      pointer-events: none; border-radius: 22px;
-      background: repeating-linear-gradient(
-        0deg, transparent, transparent 2px,
-        rgba(0,255,170,0.012) 2px, rgba(0,255,170,0.012) 4px
-      );
+      content: ''; position: absolute; inset: 0; z-index: 5;
+      pointer-events: none; border-radius: 18px;
+      background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,170,.011) 2px,rgba(0,255,170,.011) 4px);
       mix-blend-mode: screen;
     }
 
-    /* Box canvas */
     #box-canvas {
       position: absolute; inset: 0;
       width: 100% !important; height: 100% !important;
       display: block; pointer-events: none;
     }
 
-    /* Text overlay bottom of box */
     #box-overlay {
-      position: absolute; inset: 0;
+      position: absolute; inset: 0; z-index: 6;
       display: flex; flex-direction: column;
       align-items: center; justify-content: flex-end;
-      padding-bottom: 22px;
+      padding-bottom: 18px; pointer-events: none;
+    }
+    #box-lbl {
+      font-size: 9px; letter-spacing: .24em; text-transform: uppercase;
+      font-weight: 700; color: var(--muted); transition: color .2s; margin-bottom: 5px;
+    }
+    #box-hint {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(20px, 5vw, 30px);
+      letter-spacing: .06em; line-height: 1;
+      color: var(--text); transition: color .2s;
+    }
+
+    /* ── INTRO OVERLAY — inside game box, first load only ── */
+    #intro-overlay {
+      position: absolute; inset: 0; z-index: 20;
+      display: flex; flex-direction: column; align-items: center;
+      background: rgba(8,8,13,.93);
+      backdrop-filter: blur(6px);
+      border-radius: 18px;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+      padding: 18px 16px 0;
+      cursor: pointer;
+      transition: opacity .4s ease;
+    }
+    #intro-overlay.hidden { opacity: 0; pointer-events: none; }
+
+    /* scroll hint — sticky at bottom of overlay content */
+    #ish {
+      position: sticky; bottom: 0;
+      width: 100%;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 6px 0 4px;
+      background: linear-gradient(transparent, rgba(8,8,13,.9) 60%);
       pointer-events: none;
+      transition: opacity .4s;
+      margin-top: auto;
+    }
+    #ish.hide { opacity: 0; }
+    #ish span { font-size: 15px; animation: sbounce 1.3s ease-in-out infinite; display: block; }
+    #ish p { font-size: 8px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+    @keyframes sbounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(5px)} }
+
+    .io-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(20px, 6vw, 32px);
+      letter-spacing: .07em; color: var(--text);
+      text-align: center; margin-bottom: 2px;
+    }
+    .io-title em { color: var(--accent); font-style: normal; }
+    .io-sub {
+      font-size: 8px; letter-spacing: .18em; text-transform: uppercase;
+      color: var(--muted); text-align: center; margin-bottom: 14px;
     }
 
-    #box-state-label {
-      font-size: 9px;
-      letter-spacing: 0.28em;
-      text-transform: uppercase;
-      color: var(--muted);
-      font-weight: 600;
-      transition: color 0.25s ease;
-      margin-bottom: 6px;
+    .io-sec {
+      font-size: 8px; letter-spacing: .22em; text-transform: uppercase;
+      color: var(--accent); font-weight: 700; width: 100%; margin-bottom: 7px;
     }
 
-    #box-action-hint {
-      font-family: var(--font-display);
-      font-size: clamp(22px, 3.5vw, 34px);
-      letter-spacing: 0.06em;
-      color: var(--text);
-      transition: color 0.25s ease;
-      line-height: 1;
+    .io-steps { width: 100%; display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+    .io-step {
+      display: flex; align-items: flex-start; gap: 9px;
+      background: rgba(255,255,255,.04); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 11px;
     }
+    .io-n {
+      font-family: 'Bebas Neue', sans-serif; font-size: 19px;
+      color: var(--accent); line-height: 1; flex-shrink: 0;
+      width: 16px; padding-top: 1px;
+    }
+    .io-body { flex: 1; }
+    .io-t { font-size: 11px; font-weight: 700; color: var(--text); margin-bottom: 1px; }
+    .io-d { font-size: 10px; color: var(--muted); line-height: 1.4; }
+    .io-d strong { color: var(--text); font-weight: 600; }
 
-    /* ── Bottom bar — full width across all 3 cols ── */
+    .io-div { width: 100%; height: 1px; background: var(--border); margin: 10px 0; }
+
+    .io-scale { width: 100%; display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+    .io-row {
+      display: flex; align-items: center; gap: 7px;
+      background: rgba(255,255,255,.04); border: 1px solid var(--border);
+      border-radius: 7px; padding: 6px 10px;
+    }
+    .io-emoji { font-size: 13px; width: 16px; text-align: center; flex-shrink: 0; }
+    .io-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .io-range { font-family: 'Bebas Neue', sans-serif; font-size: 11px; color: var(--muted); width: 62px; flex-shrink: 0; }
+    .io-label { font-size: 10px; font-weight: 700; color: var(--text); flex: 1; }
+    .io-desc { font-size: 8px; color: var(--muted); }
+
+    .io-cta {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(16px, 5vw, 22px);
+      letter-spacing: .1em; color: var(--accent);
+      animation: ctap 2s ease-in-out infinite; text-align: center; margin-top: 2px;
+    }
+    .io-cta-sub {
+      font-size: 8px; letter-spacing: .16em; text-transform: uppercase;
+      color: var(--muted); opacity: .5; text-align: center; margin-top: 2px; margin-bottom: 6px;
+    }
+    @keyframes ctap { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* ── BOTTOM BUTTONS ── */
     #bottombar {
-      grid-column: 1 / -1; grid-row: 3;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      padding-top: 10px;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px; padding-top: 8px;
     }
 
     #btn-start {
-      font-family: var(--font-display);
-      font-size: 17px;
-      letter-spacing: 0.14em;
-      padding: 11px 48px;
-      border-radius: 8px;
-      border: none;
-      background: var(--accent);
-      color: var(--bg);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(13px, 3.5vw, 16px);
+      letter-spacing: .14em;
+      padding: 9px 0; width: min(160px, 44vw);
+      border-radius: 8px; border: none;
+      background: var(--accent); color: var(--bg);
       cursor: pointer;
-      transition: background 0.25s ease, box-shadow 0.25s ease, transform 0.12s ease;
-      box-shadow: 0 4px 22px rgba(200,255,0,0.2);
+      transition: background .2s, box-shadow .2s, transform .1s;
+      box-shadow: 0 3px 16px rgba(200,255,0,.18);
     }
-    #btn-start:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(200,255,0,0.3); }
-    #btn-start:active { transform: scale(0.97); }
-
-    #btn-start.btn-waiting {
-      background: var(--surface);
-      color: var(--muted);
-      border: 1.5px solid var(--border);
-      cursor: not-allowed;
-      box-shadow: none; transform: none;
-    }
-    #btn-start.btn-go {
-      background: var(--accent);
-      box-shadow: 0 0 36px rgba(200,255,0,0.5);
-      animation: btn-pop 0.3s ease;
-    }
-    #btn-start.btn-early {
-      background: var(--danger);
-      color: #fff;
-      border: none;
-      box-shadow: 0 4px 22px rgba(255,61,90,0.4);
-      animation: btn-shake 0.4s ease;
-    }
-    #btn-start.btn-result {
-      background: var(--surface);
-      color: var(--accent);
-      border: 1.5px solid var(--accent);
-      box-shadow: none;
-    }
-
-    @keyframes btn-pop {
-      0% { transform: scale(0.94); }
-      60% { transform: scale(1.04); }
-      100% { transform: scale(1); }
-    }
-    @keyframes btn-shake {
-      0%,100% { transform: translateX(0); }
-      20% { transform: translateX(-6px); }
-      40% { transform: translateX(6px); }
-      60% { transform: translateX(-4px); }
-      80% { transform: translateX(4px); }
-    }
+    #btn-start:hover { transform: translateY(-2px); box-shadow: 0 6px 22px rgba(200,255,0,.28); }
+    #btn-start:active { transform: scale(.97); }
+    #btn-start.bw { background: var(--surface); color: var(--muted); border: 1.5px solid var(--border); cursor: not-allowed; box-shadow: none; transform: none; }
+    #btn-start.bg { background: var(--accent); box-shadow: 0 0 28px rgba(200,255,0,.5); animation: bpop .3s ease; }
+    #btn-start.be { background: var(--danger); color: #fff; border: none; box-shadow: 0 3px 16px rgba(255,61,90,.38); animation: bshake .4s ease; }
+    #btn-start.br { background: var(--surface); color: var(--accent); border: 1.5px solid var(--accent); box-shadow: none; }
+    @keyframes bpop { 0%{transform:scale(.94)} 60%{transform:scale(1.04)} 100%{transform:scale(1)} }
 
     #btn-reset {
-      font-family: var(--font-body);
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      padding: 11px 18px;
-      border-radius: 8px;
-      border: 1.5px solid var(--border);
-      background: transparent;
-      color: var(--muted);
-      cursor: pointer;
-      transition: border-color 0.2s ease, color 0.2s ease, transform 0.12s ease;
+      font-family: 'DM Sans', sans-serif; font-size: 9px;
+      font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+      padding: 11px 14px; border-radius: 8px;
+      border: 1.5px solid var(--border); background: transparent; color: var(--muted);
+      cursor: pointer; white-space: nowrap;
+      transition: border-color .2s, color .2s, transform .1s;
     }
     #btn-reset:hover { border-color: var(--muted); color: var(--text); transform: translateY(-1px); }
-    #btn-reset:active { transform: scale(0.97); }
+    #btn-reset:active { transform: scale(.97); }
 
-    #attempts-label {
-      font-size: 9px;
-      color: var(--muted);
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      opacity: 0.4;
-      margin-left: 6px;
-    }
-
-    /* ── INTRO MODAL — full screen overlay ── */
-    #intro-modal {
-      position: fixed;
-      inset: 0;
-      z-index: 100;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      background: rgba(8, 8, 13, 0.97);
-      backdrop-filter: blur(16px);
-      overflow-y: auto;
-      scroll-behavior: smooth;
-      transition: opacity 0.5s ease;
-      padding: 0;
-    }
-    #intro-modal.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    #intro-inner {
-      width: 100%;
-      max-width: 540px;
-      padding: 56px 40px 80px;
+    #sparkline-row {
       display: flex;
       flex-direction: column;
-      align-items: center;
-      gap: 0;
+      gap: 2px;
     }
-
-    /* ── Scroll hint — bounces at bottom, hides once user scrolls ── */
-    #scroll-hint {
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 102;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 5px;
-      pointer-events: none;
-      transition: opacity 0.4s ease;
-    }
-    #scroll-hint.hide { opacity: 0; }
-    #scroll-hint span {
-      font-size: 20px;
-      animation: bounce-down 1.4s ease-in-out infinite;
-      display: block;
-    }
-    @keyframes bounce-down {
-      0%,100% { transform: translateY(0); }
-      50%     { transform: translateY(7px); }
-    }
-    #scroll-hint p {
-      font-size: 9px;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--muted);
-      font-family: var(--font-body);
-      opacity: 0.7;
-    }
-
-    .intro-title {
-      font-family: var(--font-display);
-      font-size: clamp(34px, 7vw, 56px);
-      letter-spacing: 0.08em;
-      color: var(--text);
-      margin-bottom: 6px;
-      text-align: center;
-    }
-    .intro-title em { color: var(--accent); font-style: normal; }
-    .intro-sub {
-      font-size: 10px;
-      letter-spacing: 0.24em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 44px;
-      text-align: center;
-    }
-
-    /* ── How to play section ── */
-    .intro-section-title {
-      font-size: 9px;
-      letter-spacing: 0.28em;
-      text-transform: uppercase;
-      color: var(--accent);
-      font-weight: 700;
-      margin-bottom: 14px;
-      align-self: flex-start;
-      width: 100%;
-    }
-
-    .intro-steps {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      width: 100%;
-      margin-bottom: 44px;
-    }
-    .intro-step {
-      display: flex;
-      align-items: flex-start;
-      gap: 16px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 14px 18px;
-    }
-    .step-num {
-      font-family: var(--font-display);
-      font-size: 28px;
-      color: var(--accent);
-      line-height: 1;
-      flex-shrink: 0;
-      width: 26px;
-      padding-top: 1px;
-    }
-    .step-body { flex: 1; }
-    .step-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 3px;
-      letter-spacing: 0.02em;
-    }
-    .step-desc {
-      font-size: 11px;
-      color: var(--muted);
-      line-height: 1.55;
-    }
-    .step-desc strong { color: var(--text); font-weight: 600; }
-
-    .intro-divider {
-      width: 100%;
-      height: 1px;
-      background: var(--border);
-      margin-bottom: 36px;
-    }
-
-    /* ── Reaction time guide ── */
-    .intro-scale {
-      width: 100%;
-      margin-bottom: 44px;
-    }
-    .scale-rows {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .scale-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 11px 16px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-    }
-    .scale-emoji { font-size: 17px; flex-shrink: 0; width: 22px; text-align: center; }
-    .scale-dot {
-      width: 9px; height: 9px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-    .scale-range {
-      font-family: var(--font-display);
-      font-size: 14px;
-      color: var(--muted);
-      width: 88px;
-      flex-shrink: 0;
-    }
-    .scale-label {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--text);
-      flex: 1;
-    }
-    .scale-desc {
-      font-size: 10px;
-      color: var(--muted);
-      letter-spacing: 0.05em;
-    }
-
-    /* ── CTA button ── */
-    .intro-cta-wrap {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-      width: 100%;
-    }
-    #btn-intro-start {
-      font-family: var(--font-display);
-      font-size: 21px;
-      letter-spacing: 0.14em;
-      padding: 17px 0;
-      width: 100%;
-      border-radius: 10px;
-      border: none;
-      background: var(--accent);
-      color: var(--bg);
-      cursor: pointer;
-      transition: transform 0.15s ease, box-shadow 0.2s ease;
-      box-shadow: 0 6px 32px rgba(200,255,0,0.25);
-    }
-    #btn-intro-start:hover { transform: translateY(-3px); box-shadow: 0 10px 40px rgba(200,255,0,0.35); }
-    #btn-intro-start:active { transform: scale(0.98); }
-
-    .intro-cta-sub {
-      font-size: 9px;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--muted);
-      opacity: 0.55;
-    }
-
-    /* ── BACK TO MENU icon button ── */
-    #btn-menu {
-      display: none;
-      align-items: center;
-      justify-content: center;
-      width: 40px; height: 40px;
-      border-radius: 8px;
-      border: 1.5px solid var(--border);
-      background: transparent;
-      color: var(--muted);
-      cursor: pointer;
-      transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
-      flex-shrink: 0;
-    }
-    #btn-menu.visible { display: flex; }
-    #btn-menu:hover {
-      border-color: var(--text);
-      color: var(--text);
-      background: var(--surface);
-    }
-    #btn-menu:active { transform: scale(0.94); }
-    #btn-menu svg {
-      width: 16px; height: 16px;
-      fill: currentColor;
-    }
-
-    /* mobile handled below */
-
-    @media (max-width: 700px) {
-      #app {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto auto 1fr auto auto;
-        padding: 14px 16px 12px;
-        overflow-y: auto;
-        height: auto; min-height: 100vh;
-      }
-      #logo-block  { grid-column: 1; grid-row: 1; }
-      #top-center  { display: none; }
-      #score-card  { grid-column: 1; grid-row: 2; align-items: flex-start; }
-      #left-mid, #right-mid { display: none; }
-      #center      { grid-column: 1; grid-row: 3; }
-      #bottombar   { grid-column: 1; grid-row: 4; }
-      #click-box   { width: min(360px, 92vw); }
-      #result-ms   { font-size: 36px; }
-      #mini-stats  { gap: 12px; }
-    }
+    @keyframes fup { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
   </style>
 </head>
 <body>
@@ -665,943 +473,460 @@
 <div id="grain"></div>
 <div id="flash"></div>
 
-<!-- ── FULL SCREEN INTRO MODAL ── -->
-<div id="intro-modal">
-  <div id="intro-inner">
-    <div class="intro-title">REACTION <em>GAME</em></div>
-    <div class="intro-sub">How fast are your reflexes?</div>
-
-    <!-- How to play -->
-    <div class="intro-section-title">📋 How to Play</div>
-    <div class="intro-steps">
-      <div class="intro-step">
-        <div class="step-num">1</div>
-        <div class="step-body">
-          <div class="step-title">Start the round</div>
-          <div class="step-desc">Click the gem, press the <strong>START</strong> button, or hit <strong>Spacebar</strong></div>
-        </div>
-      </div>
-      <div class="intro-step">
-        <div class="step-num">2</div>
-        <div class="step-body">
-          <div class="step-title">Wait for the signal</div>
-          <div class="step-desc">The gem will pulse and change color. Stay focused — the wait is <strong>random</strong></div>
-        </div>
-      </div>
-      <div class="intro-step">
-        <div class="step-num">3</div>
-        <div class="step-body">
-          <div class="step-title">React when it goes <span style="color:var(--accent)">GREEN</span></div>
-          <div class="step-desc">When the border flashes green — click or tap as fast as you can!</div>
-        </div>
-      </div>
-      <div class="intro-step">
-        <div class="step-num">!</div>
-        <div class="step-body">
-          <div class="step-title">Don't click too early</div>
-          <div class="step-desc">Clicking <strong>before the green signal</strong> will reset your round with a penalty</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="intro-divider"></div>
-
-    <!-- Reaction time guide -->
-    <div class="intro-section-title">⚡ Reaction Time Guide</div>
-    <div class="intro-scale">
-      <div class="scale-rows">
-        <div class="scale-row">
-          <div class="scale-emoji">🤖</div>
-          <div class="scale-dot" style="background:#C8FF00"></div>
-          <div class="scale-range">&lt; 150ms</div>
-          <div class="scale-label">Superhuman</div>
-          <div class="scale-desc">Basically a robot</div>
-        </div>
-        <div class="scale-row">
-          <div class="scale-emoji">🎯</div>
-          <div class="scale-dot" style="background:#C8FF00"></div>
-          <div class="scale-range">150–200ms</div>
-          <div class="scale-label">Amazing</div>
-          <div class="scale-desc">Pro-gamer tier</div>
-        </div>
-        <div class="scale-row">
-          <div class="scale-emoji">🔥</div>
-          <div class="scale-dot" style="background:#00E5FF"></div>
-          <div class="scale-range">200–250ms</div>
-          <div class="scale-label">Very Good</div>
-          <div class="scale-desc">Above average</div>
-        </div>
-        <div class="scale-row">
-          <div class="scale-emoji">👊</div>
-          <div class="scale-dot" style="background:#00E5FF"></div>
-          <div class="scale-range">250–300ms</div>
-          <div class="scale-label">Good</div>
-          <div class="scale-desc">Solid reflexes</div>
-        </div>
-        <div class="scale-row">
-          <div class="scale-emoji">😐</div>
-          <div class="scale-dot" style="background:#F0F0F5"></div>
-          <div class="scale-range">300–380ms</div>
-          <div class="scale-label">Average</div>
-          <div class="scale-desc">Normal human range</div>
-        </div>
-        <div class="scale-row">
-          <div class="scale-emoji">🐢</div>
-          <div class="scale-dot" style="background:#6B6B80"></div>
-          <div class="scale-range">380–500ms</div>
-          <div class="scale-label">Below Average</div>
-          <div class="scale-desc">Keep practicing</div>
-        </div>
-        <div class="scale-row">
-          <div class="scale-emoji">☕</div>
-          <div class="scale-dot" style="background:#FF3D5A"></div>
-          <div class="scale-range">&gt; 500ms</div>
-          <div class="scale-label">Needs Coffee</div>
-          <div class="scale-desc">Maybe take a break</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="intro-cta-wrap">
-      <button id="btn-intro-start" onclick="startFromIntro()">START PLAYING</button>
-      <div class="intro-cta-sub">or press spacebar</div>
-    </div>
-  </div>
-</div>
-
-<!-- Scroll hint — visible while intro modal is open, hides on scroll -->
-<div id="scroll-hint">
-  <span>👇</span>
-  <p>Scroll to see more</p>
-</div>
-
 <div id="app">
 
-  <!-- Col 1 Row 1: Logo -->
-  <div id="logo-block">
-    <div class="logo">REACTION <em>GAME</em></div>
-    <div class="tagline">How fast are your reflexes?</div>
-  </div>
-
-  <!-- Col 2 Row 1: spacer -->
-  <div id="top-center"></div>
-
-  <!-- Col 3 Row 1: Score card -->
-  <div id="score-card">
-    <div id="result-block">
-      <div id="result-ms">—</div>
-      <div id="result-label">milliseconds</div>
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <div>
+      <div class="logo">REACTION <em>GAME</em></div>
+      <div class="tagline">How fast are your reflexes?</div>
     </div>
-    <div id="rating-badge">Awaiting result</div>
-    <div id="score-legend">
-      <div class="legend-row">
-        <div class="legend-dot" style="background:#C8FF00"></div>
-        <div class="legend-range">&lt; 200ms</div>
-        <div class="legend-label" id="leg-amazing">Amazing</div>
-      </div>
-      <div class="legend-row">
-        <div class="legend-dot" style="background:#00E5FF"></div>
-        <div class="legend-range">200–300ms</div>
-        <div class="legend-label" id="leg-good">Very Good</div>
-      </div>
-      <div class="legend-row">
-        <div class="legend-dot" style="background:#F0F0F5"></div>
-        <div class="legend-range">300–380ms</div>
-        <div class="legend-label" id="leg-avg">Average</div>
-      </div>
-      <div class="legend-row">
-        <div class="legend-dot" style="background:#6B6B80"></div>
-        <div class="legend-range">380–500ms</div>
-        <div class="legend-label" id="leg-below">Below Avg</div>
-      </div>
-      <div class="legend-row">
-        <div class="legend-dot" style="background:#FF3D5A"></div>
-        <div class="legend-range">&gt; 500ms</div>
-        <div class="legend-label" id="leg-slow">Slow</div>
-      </div>
-    </div>
-    <div id="mini-stats">
-      <div class="mini-stat">
-        <div class="mini-stat-val" id="stat-avg">—</div>
-        <div class="mini-stat-label">Avg</div>
-      </div>
-      <div class="mini-stat">
-        <div class="mini-stat-val best-val" id="stat-best">—</div>
-        <div class="mini-stat-label">Best</div>
-      </div>
-      <div class="mini-stat">
-        <div class="mini-stat-val" id="stat-attempts">0</div>
-        <div class="mini-stat-label">Runs</div>
-      </div>
-    </div>
-    <div id="history-pills"></div>
-  </div>
-
-  <!-- Col 1+3 Row 2: side spacers -->
-  <div id="left-mid"></div>
-  <div id="right-mid"></div>
-
-  <!-- Col 2 Row 2: Gem box (center) -->
-  <div id="center">
-    <div id="click-box" class="state-idle" onclick="handleAction()">
-      <canvas id="box-canvas"></canvas>
-      <div id="box-overlay">
-        <div id="box-state-label"></div>
-        <div id="box-action-hint"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Row 3: Buttons — spans all columns -->
-  <div id="bottombar">
-    <button id="btn-menu" onclick="showMenu()" title="Back to menu">
-      <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-        <rect x="1" y="1" width="6" height="6" rx="1.2"/>
-        <rect x="9" y="1" width="6" height="6" rx="1.2"/>
-        <rect x="1" y="9" width="6" height="6" rx="1.2"/>
-        <rect x="9" y="9" width="6" height="6" rx="1.2"/>
-      </svg>
+    <button id="btn-menu" title="Back to instructions">
+      <svg viewBox="0 0 16 16"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
     </button>
-    <button id="btn-start" onclick="handleAction()">START</button>
-    <button id="btn-reset" onclick="resetStats()">RESET STATS</button>
-    <span id="attempts-label"></span>
+  </div>
+
+  <!-- STATS PANEL -->
+  <div id="stats-strip">
+    <!-- Left: live result -->
+    <div id="stat-result-block">
+      <div id="result-ms">—</div>
+      <div id="result-unit">milliseconds</div>
+      <div id="rating-badge">Awaiting result</div>
+    </div>
+    <!-- Right: session metrics grid + sparkline -->
+    <div style="display:flex;flex-direction:column;flex:1;gap:5px;">
+      <div id="mini-stats">
+        <div class="mstat"><div class="mstat-val" id="stat-avg">—</div><div class="mstat-lbl">Avg</div></div>
+        <div class="mstat"><div class="mstat-val best" id="stat-best">—</div><div class="mstat-lbl">Best</div></div>
+        <div class="mstat"><div class="mstat-val" id="stat-runs">0</div><div class="mstat-lbl">Runs</div></div>
+      </div>
+      <div id="sparkline-row">
+        <div id="score-bar-wrap">
+          <div id="score-bar-track"></div>
+          <div id="score-bar-marker">
+            <div id="sbm-label"></div>
+            <div id="sbm-diamond"></div>
+            <div id="sbm-tick"></div>
+          </div>
+        </div>
+        <div id="score-bar-labels">
+          <span class="sbl">☕ Slow</span>
+          <span class="sbl">Average</span>
+          <span class="sbl">🤖 Super</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAME BOX -->
+  <div id="center">
+    <div id="click-box" class="state-idle">
+      <canvas id="box-canvas"></canvas>
+
+      <!-- ── INTRO OVERLAY — first load, inside game box ── -->
+      <div id="intro-overlay">
+
+        <div class="io-title">REACTION <em>GAME</em></div>
+        <div class="io-sub">How fast are your reflexes?</div>
+
+        <div class="io-sec">📋 How to Play</div>
+        <div class="io-steps">
+          <div class="io-step">
+            <div class="io-n">1</div>
+            <div class="io-body">
+              <div class="io-t">Start a round</div>
+              <div class="io-d">Tap the box, press <strong>START</strong>, or hit <strong>Spacebar</strong></div>
+            </div>
+          </div>
+          <div class="io-step">
+            <div class="io-n">2</div>
+            <div class="io-body">
+              <div class="io-t">Wait for the signal</div>
+              <div class="io-d">The gem will pulse — the wait is <strong>random</strong></div>
+            </div>
+          </div>
+          <div class="io-step">
+            <div class="io-n">3</div>
+            <div class="io-body">
+              <div class="io-t">React when it turns <span style="color:var(--accent)">GREEN</span></div>
+              <div class="io-d">Tap or click as fast as you can!</div>
+            </div>
+          </div>
+          <div class="io-step">
+            <div class="io-n">!</div>
+            <div class="io-body">
+              <div class="io-t">Don't click early</div>
+              <div class="io-d">Clicking <strong>before green</strong> resets your round</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="io-div"></div>
+
+        <div class="io-sec">⚡ Reaction Time Guide</div>
+        <div class="io-scale">
+          <div class="io-row"><span class="io-emoji">🤖</span><div class="io-dot" style="background:#C8FF00"></div><div class="io-range">&lt;150ms</div><div class="io-label">Superhuman</div><div class="io-desc">Basically a robot</div></div>
+          <div class="io-row"><span class="io-emoji">🎯</span><div class="io-dot" style="background:#C8FF00"></div><div class="io-range">150–200ms</div><div class="io-label">Amazing</div><div class="io-desc">Pro-gamer tier</div></div>
+          <div class="io-row"><span class="io-emoji">🔥</span><div class="io-dot" style="background:#00E5FF"></div><div class="io-range">200–250ms</div><div class="io-label">Very Good</div><div class="io-desc">Above average</div></div>
+          <div class="io-row"><span class="io-emoji">👊</span><div class="io-dot" style="background:#00E5FF"></div><div class="io-range">250–300ms</div><div class="io-label">Good</div><div class="io-desc">Solid reflexes</div></div>
+          <div class="io-row"><span class="io-emoji">😐</span><div class="io-dot" style="background:#F0F0F5"></div><div class="io-range">300–380ms</div><div class="io-label">Average</div><div class="io-desc">Normal human</div></div>
+          <div class="io-row"><span class="io-emoji">🐢</span><div class="io-dot" style="background:#6B6B80"></div><div class="io-range">380–500ms</div><div class="io-label">Below Avg</div><div class="io-desc">Keep practicing</div></div>
+          <div class="io-row"><span class="io-emoji">☕</span><div class="io-dot" style="background:#FF3D5A"></div><div class="io-range">&gt;500ms</div><div class="io-label">Needs Coffee</div><div class="io-desc">Take a break</div></div>
+        </div>
+
+        <div class="io-cta">TAP TO START</div>
+        <div class="io-cta-sub">or press spacebar</div>
+
+        <!-- Sticky scroll hint -->
+        <div id="ish">
+          <span>👇</span>
+          <p>Scroll for more</p>
+        </div>
+      </div>
+
+      <!-- State label overlay -->
+      <div id="box-overlay">
+        <div id="box-lbl"></div>
+        <div id="box-hint"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM BUTTONS -->
+  <div id="bottombar">
+    <button id="btn-start">START</button>
+    <button id="btn-reset">RESET</button>
   </div>
 
 </div>
 
 <script>
-/* ═══════════════════════════════════════════════════
-   BACKGROUND SCENE — ambient wireframes + particles
-═══════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════
+   BG SCENE — ambient wireframes + particles
+═══════════════════════════════════════════════ */
 (function() {
   const canvas = document.getElementById('bg-canvas');
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setClearColor(0x0A0A0F, 1);
-
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 100);
+  const camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.1, 100);
   camera.position.z = 20;
-
-  // Particles
   const pGeo = new THREE.BufferGeometry();
-  const pCount = 100;
-  const pPos = new Float32Array(pCount * 3);
-  for (let i = 0; i < pCount * 3; i++) pPos[i] = (Math.random() - 0.5) * 55;
+  const pPos = new Float32Array(300);
+  for (let i = 0; i < 300; i++) pPos[i] = (Math.random()-.5)*55;
   pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
-  scene.add(new THREE.Points(pGeo, new THREE.PointsMaterial({ color: 0x252535, size: 0.1, transparent: true, opacity: 0.8 })));
-
-  // Background wireframes
-  const bgMeshes = [
-    [new THREE.IcosahedronGeometry(4, 1), 14, 3, -18],
-    [new THREE.OctahedronGeometry(3, 0), -13, -4, -16],
-    [new THREE.DodecahedronGeometry(2.5, 0), 2, -9, -20],
-  ].map(([g, x, y, z]) => {
-    const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ wireframe: true, color: 0x1A1A26, transparent: true, opacity: 0.45 }));
-    m.position.set(x, y, z);
-    m.userData.rs = { x: 0.0008 + Math.random() * 0.001, y: 0.001 + Math.random() * 0.0015 };
+  scene.add(new THREE.Points(pGeo, new THREE.PointsMaterial({ color:0x252535, size:0.1, transparent:true, opacity:0.8 })));
+  const bgM = [
+    [new THREE.IcosahedronGeometry(4,1), 14, 3,-18],
+    [new THREE.OctahedronGeometry(3,0), -13,-4,-16],
+    [new THREE.DodecahedronGeometry(2.5,0), 2,-9,-20],
+  ].map(([g,x,y,z]) => {
+    const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({wireframe:true,color:0x1A1A26,transparent:true,opacity:0.45}));
+    m.position.set(x,y,z); m.userData.rs={x:0.0008+Math.random()*.001,y:0.001+Math.random()*.0015};
     scene.add(m); return m;
   });
-
-  let t = 0;
-  function loop() {
-    requestAnimationFrame(loop);
-    t += 0.004;
-    bgMeshes.forEach(m => { m.rotation.x += m.userData.rs.x; m.rotation.y += m.userData.rs.y; });
-    camera.position.x = Math.sin(t * 0.28) * 1.0;
-    camera.position.y = Math.cos(t * 0.18) * 0.5;
-    camera.lookAt(0, 0, 0);
-    renderer.render(scene, camera);
-  }
+  let t=0;
+  function loop(){ requestAnimationFrame(loop); t+=.004; bgM.forEach(m=>{m.rotation.x+=m.userData.rs.x;m.rotation.y+=m.userData.rs.y;}); camera.position.x=Math.sin(t*.28)*1; camera.position.y=Math.cos(t*.18)*.5; camera.lookAt(0,0,0); renderer.render(scene,camera); }
   loop();
-
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
+  window.addEventListener('resize',()=>{ camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth,window.innerHeight); });
 })();
 
-
-/* ═══════════════════════════════════════════════════
-   BOX SCENE — Floating crystal gem with energy halo
-═══════════════════════════════════════════════════ */
-const boxCanvas = document.getElementById('box-canvas');
-const bR = new THREE.WebGLRenderer({ canvas: boxCanvas, antialias: true, alpha: true });
-bR.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-bR.setClearColor(0x000000, 0);
-
+/* ═══════════════════════════════════════════════
+   BOX SCENE — Crystal gem
+═══════════════════════════════════════════════ */
+const bR = new THREE.WebGLRenderer({ canvas: document.getElementById('box-canvas'), antialias:true, alpha:true });
+bR.setPixelRatio(Math.min(window.devicePixelRatio,2));
+bR.setClearColor(0,0);
 const bScene = new THREE.Scene();
-const bCam = new THREE.PerspectiveCamera(46, 1, 0.1, 100);
+const bCam = new THREE.PerspectiveCamera(46,1,.1,100);
 bCam.position.z = 5.8;
 
-// ── Lights ──
-const bAmb = new THREE.AmbientLight(0x111122, 1.2);
-bScene.add(bAmb);
+const bAmb = new THREE.AmbientLight(0x111122,1.2); bScene.add(bAmb);
+const bL1 = new THREE.PointLight(0xC8FF00,5,22); bL1.position.set(4,3,5); bScene.add(bL1);
+const bL2 = new THREE.PointLight(0x00E5FF,4,20); bL2.position.set(-4,-2,4); bScene.add(bL2);
+const bL3 = new THREE.PointLight(0xFF3D5A,0,16); bL3.position.set(0,0,6); bScene.add(bL3);
+const bL4 = new THREE.PointLight(0x8866FF,3,14); bL4.position.set(0,-4,-1); bScene.add(bL4);
 
-const bL1 = new THREE.PointLight(0xC8FF00, 5, 22);
-bL1.position.set(4, 3, 5);
-bScene.add(bL1);
-
-const bL2 = new THREE.PointLight(0x00E5FF, 4, 20);
-bL2.position.set(-4, -2, 4);
-bScene.add(bL2);
-
-const bL3 = new THREE.PointLight(0xFF3D5A, 0, 16);
-bL3.position.set(0, 0, 6);
-bScene.add(bL3);
-
-// Rim light from below — gives gem an inner glow feel
-const bL4 = new THREE.PointLight(0x8866FF, 3, 14);
-bL4.position.set(0, -4, -1);
-bScene.add(bL4);
-
-// ── Build a custom gem/diamond geometry ──
-// Crown (top): 8-sided pyramid
-// Girdle: 16-vertex belt
-// Pavilion (bottom): 8-sided deep cone
-function buildGemGeometry() {
-  const verts = [];
-  const indices = [];
-  const N = 8; // facet count
-  const crownH  =  0.55;  // top point
-  const tableY  =  0.35;  // table (top flat ring)
-  const girdleY =  0.0;   // widest ring
-  const culetY  = -1.1;   // bottom point
-  const tableR  =  0.52;
-  const girdleR =  0.78;
-
-  // 0: top apex
-  verts.push(0, crownH, 0);
-
-  // 1..N: table ring
-  for (let i = 0; i < N; i++) {
-    const a = (i / N) * Math.PI * 2;
-    verts.push(tableR * Math.cos(a), tableY, tableR * Math.sin(a));
-  }
-
-  // N+1..2N: girdle ring (offset by half step for staggered facets)
-  for (let i = 0; i < N; i++) {
-    const a = ((i + 0.5) / N) * Math.PI * 2;
-    verts.push(girdleR * Math.cos(a), girdleY, girdleR * Math.sin(a));
-  }
-
-  // 2N+1: bottom culet
-  verts.push(0, culetY, 0);
-
-  const apex = 0;
-  const tableStart = 1;
-  const girdleStart = N + 1;
-  const culet = 2 * N + 1;
-
-  // Crown facets: apex → table[i] → table[i+1]
-  for (let i = 0; i < N; i++) {
-    const a = tableStart + i;
-    const b = tableStart + (i + 1) % N;
-    indices.push(apex, a, b);
-  }
-
-  // Upper kite facets: table[i] → girdle[i] → table[i+1]
-  for (let i = 0; i < N; i++) {
-    const ta = tableStart + i;
-    const tb = tableStart + (i + 1) % N;
-    const ga = girdleStart + i;
-    const gb = girdleStart + (i + 1) % N;
-    // two triangles per kite
-    indices.push(ta, ga, tb);
-    indices.push(ga, gb, tb);
-  }
-
-  // Pavilion facets: girdle[i] → culet → girdle[i+1]
-  for (let i = 0; i < N; i++) {
-    const a = girdleStart + i;
-    const b = girdleStart + (i + 1) % N;
-    indices.push(a, culet, b);
-  }
-
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(verts), 3));
-  geo.setIndex(indices);
-  geo.computeVertexNormals();
-  return geo;
+function buildGem() {
+  const v=[],idx=[],N=8,cH=.55,tY=.35,gY=0,cY=-1.1,tR=.52,gR=.78;
+  v.push(0,cH,0);
+  for(let i=0;i<N;i++){const a=i/N*Math.PI*2;v.push(tR*Math.cos(a),tY,tR*Math.sin(a));}
+  for(let i=0;i<N;i++){const a=(i+.5)/N*Math.PI*2;v.push(gR*Math.cos(a),gY,gR*Math.sin(a));}
+  v.push(0,cY,0);
+  const tS=1,gS=N+1,cu=2*N+1;
+  for(let i=0;i<N;i++) idx.push(0,tS+i,tS+(i+1)%N);
+  for(let i=0;i<N;i++){const ta=tS+i,tb=tS+(i+1)%N,ga=gS+i,gb=gS+(i+1)%N;idx.push(ta,ga,tb);idx.push(ga,gb,tb);}
+  for(let i=0;i<N;i++) idx.push(gS+i,cu,gS+(i+1)%N);
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(v),3));
+  geo.setIndex(idx);geo.computeVertexNormals();return geo;
 }
 
-const gemGeo = buildGemGeometry();
+const gMat=new THREE.MeshPhongMaterial({color:0x050515,emissive:0x0A0820,specular:0xFFFFFF,shininess:260,transparent:true,opacity:.72,side:THREE.DoubleSide});
+const gMesh=new THREE.Mesh(buildGem(),gMat); bScene.add(gMesh);
+const igMat=new THREE.MeshPhongMaterial({color:0x0A0830,emissive:0x100828,specular:0xC8FF00,shininess:400,transparent:true,opacity:.5,side:THREE.BackSide});
+const igMesh=new THREE.Mesh(buildGem(),igMat); igMesh.scale.setScalar(.78); bScene.add(igMesh);
+const wMat=new THREE.MeshBasicMaterial({wireframe:true,color:0x4444AA,transparent:true,opacity:.22});
+const wMesh=new THREE.Mesh(buildGem(),wMat); wMesh.scale.setScalar(1.005); bScene.add(wMesh);
 
-// Outer gem — semi-transparent deep glass
-const gemMat = new THREE.MeshPhongMaterial({
-  color: 0x050515,
-  emissive: 0x0A0820,
-  specular: 0xFFFFFF,
-  shininess: 260,
-  transparent: true,
-  opacity: 0.72,
-  side: THREE.DoubleSide,
-});
-const gemMesh = new THREE.Mesh(gemGeo, gemMat);
-bScene.add(gemMesh);
+function arc(r,t,rx,ry,rz,c,o){const m=new THREE.Mesh(new THREE.TorusGeometry(r,t,6,100),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:o}));m.rotation.set(rx,ry,rz);bScene.add(m);return m;}
+const rg1=arc(1.55,.010,Math.PI/2.5,.4,0,0x4444CC,.35);
+const rg2=arc(1.75,.007,-Math.PI/3.5,.8,.3,0x2222AA,.22);
+const rg3=arc(1.38,.008,Math.PI/1.8,1.2,-.5,0x6633BB,.28);
 
-// Inner gem — slightly smaller, brighter, different hue for refraction illusion
-const innerGemGeo = buildGemGeometry();
-const innerGemMat = new THREE.MeshPhongMaterial({
-  color: 0x0A0830,
-  emissive: 0x100828,
-  specular: 0xC8FF00,
-  shininess: 400,
-  transparent: true,
-  opacity: 0.5,
-  side: THREE.BackSide,
-});
-const innerGem = new THREE.Mesh(innerGemGeo, innerGemMat);
-innerGem.scale.setScalar(0.78);
-bScene.add(innerGem);
+const hGeo=new THREE.BufferGeometry();
+const hN=220,hP=new Float32Array(hN*3),hRad=new Float32Array(hN),hAng=new Float32Array(hN),hSpd=new Float32Array(hN),hTlt=new Float32Array(hN);
+for(let i=0;i<hN;i++){hRad[i]=1.3+Math.random()*1.4;hAng[i]=Math.random()*Math.PI*2;hSpd[i]=(0.003+Math.random()*.006)*(Math.random()<.5?1:-1);hTlt[i]=Math.random()*Math.PI;hP[i*3]=hRad[i];}
+hGeo.setAttribute('position',new THREE.BufferAttribute(hP,3));
+const hMat=new THREE.PointsMaterial({color:0xC8FF00,size:.022,transparent:true,opacity:.65,sizeAttenuation:true});
+bScene.add(new THREE.Points(hGeo,hMat));
 
-// Gem wireframe edges — visible facets
-const gemWireMat = new THREE.MeshBasicMaterial({
-  wireframe: true,
-  color: 0x4444AA,
-  transparent: true,
-  opacity: 0.22,
-});
-const gemWire = new THREE.Mesh(buildGemGeometry(), gemWireMat);
-gemWire.scale.setScalar(1.005);
-bScene.add(gemWire);
+const BS={rot:.006,tRot:.006,burst:false,bT:0,pulse:false,l1c:new THREE.Color(0xC8FF00),l1i:5,l2c:new THREE.Color(0x00E5FF),l2i:4,l3i:0,gc:new THREE.Color(0x050515),ge:new THREE.Color(0x0A0820),wc:new THREE.Color(0x4444AA),rc:new THREE.Color(0x4444CC),hc:new THREE.Color(0xC8FF00)};
 
-// ── Energy orbit rings ──
-function makeArc(radius, tube, rx, ry, rz, color, opacity) {
-  const m = new THREE.Mesh(
-    new THREE.TorusGeometry(radius, tube, 6, 100),
-    new THREE.MeshBasicMaterial({ color, transparent: true, opacity })
-  );
-  m.rotation.set(rx, ry, rz);
-  bScene.add(m);
-  return m;
-}
-const ring1 = makeArc(1.55, 0.010, Math.PI / 2.5,  0.4, 0,    0x4444CC, 0.35);
-const ring2 = makeArc(1.75, 0.007, -Math.PI / 3.5, 0.8, 0.3,  0x2222AA, 0.22);
-const ring3 = makeArc(1.38, 0.008, Math.PI / 1.8,  1.2, -0.5, 0x6633BB, 0.28);
-
-// ── Particle halo ──
-const haloGeo = new THREE.BufferGeometry();
-const hCount = 220;
-const hPos = new Float32Array(hCount * 3);
-const hRadii = new Float32Array(hCount);   // individual orbit radius
-const hAngles = new Float32Array(hCount);  // start angle
-const hSpeeds = new Float32Array(hCount);  // orbit speed
-const hTilts  = new Float32Array(hCount);  // tilt angle
-for (let i = 0; i < hCount; i++) {
-  hRadii[i]  = 1.3 + Math.random() * 1.4;
-  hAngles[i] = Math.random() * Math.PI * 2;
-  hSpeeds[i] = (0.003 + Math.random() * 0.006) * (Math.random() < 0.5 ? 1 : -1);
-  hTilts[i]  = Math.random() * Math.PI;
-  hPos[i * 3]     = hRadii[i];
-  hPos[i * 3 + 1] = 0;
-  hPos[i * 3 + 2] = 0;
-}
-haloGeo.setAttribute('position', new THREE.BufferAttribute(hPos, 3));
-const haloMat = new THREE.PointsMaterial({
-  color: 0xC8FF00,
-  size: 0.022,
-  transparent: true,
-  opacity: 0.65,
-  sizeAttenuation: true,
-});
-const haloPoints = new THREE.Points(haloGeo, haloMat);
-bScene.add(haloPoints);
-
-// ── State controller ──
-const BS = {
-  rotSpeed: 0.006,
-  targetRotSpeed: 0.006,
-  burstActive: false,
-  burstTime: 0,
-  pulseActive: false,
-  l1Col: new THREE.Color(0xC8FF00), l1Int: 5,
-  l2Col: new THREE.Color(0x00E5FF), l2Int: 4,
-  l3Int: 0,
-  gemCol:  new THREE.Color(0x050515),
-  gemEmi:  new THREE.Color(0x0A0820),
-  wireCol: new THREE.Color(0x4444AA),
-  ringCol: new THREE.Color(0x4444CC),
-  haloCol: new THREE.Color(0xC8FF00),
-};
-
-function setBoxState(s) {
-  if (s === 'idle') {
-    BS.targetRotSpeed = 0.006;
-    BS.l1Col.setHex(0xC8FF00); BS.l1Int = 5;
-    BS.l2Col.setHex(0x00E5FF); BS.l2Int = 4;
-    BS.l3Int = 0;
-    BS.gemCol.setHex(0x050515);  BS.gemEmi.setHex(0x0A0820);
-    BS.wireCol.setHex(0x4444AA); BS.ringCol.setHex(0x4444CC);
-    BS.haloCol.setHex(0xC8FF00); BS.pulseActive = false;
-  } else if (s === 'waiting') {
-    BS.targetRotSpeed = 0.009;
-    BS.l1Col.setHex(0x6655AA); BS.l1Int = 2.5;
-    BS.l2Col.setHex(0x2233AA); BS.l2Int = 2;
-    BS.l3Int = 0;
-    BS.gemCol.setHex(0x030310);  BS.gemEmi.setHex(0x060618);
-    BS.wireCol.setHex(0x222266); BS.ringCol.setHex(0x222288);
-    BS.haloCol.setHex(0x4444AA); BS.pulseActive = true;
-  } else if (s === 'go') {
-    BS.targetRotSpeed = 0.032;
-    BS.l1Col.setHex(0xC8FF00); BS.l1Int = 12;
-    BS.l2Col.setHex(0xAAFF00); BS.l2Int = 8;
-    BS.l3Int = 0;
-    BS.gemCol.setHex(0x1A2200);  BS.gemEmi.setHex(0x243200);
-    BS.wireCol.setHex(0x88BB00); BS.ringCol.setHex(0x99CC00);
-    BS.haloCol.setHex(0xC8FF00);
-    BS.pulseActive = false; BS.burstActive = true; BS.burstTime = 0;
-  } else if (s === 'early') {
-    BS.targetRotSpeed = 0.002;
-    BS.l1Col.setHex(0xFF3D5A); BS.l1Int = 8;
-    BS.l2Col.setHex(0xFF0000); BS.l2Int = 5;
-    BS.l3Int = 7; bL3.color.setHex(0xFF3D5A);
-    BS.gemCol.setHex(0x1A0008);  BS.gemEmi.setHex(0x0E0004);
-    BS.wireCol.setHex(0xFF2244); BS.ringCol.setHex(0x440010);
-    BS.haloCol.setHex(0xFF3D5A); BS.pulseActive = false;
-  } else if (s === 'result') {
-    BS.targetRotSpeed = 0.012;
-    BS.l1Col.setHex(0x00E5FF); BS.l1Int = 6;
-    BS.l2Col.setHex(0x0088BB); BS.l2Int = 4;
-    BS.l3Int = 0;
-    BS.gemCol.setHex(0x001A22);  BS.gemEmi.setHex(0x000E18);
-    BS.wireCol.setHex(0x0088AA); BS.ringCol.setHex(0x0055AA);
-    BS.haloCol.setHex(0x00E5FF); BS.pulseActive = false;
-  }
+function setBS(s){
+  if(s==='idle')    {BS.tRot=.006;BS.l1c.setHex(0xC8FF00);BS.l1i=5;BS.l2c.setHex(0x00E5FF);BS.l2i=4;BS.l3i=0;BS.gc.setHex(0x050515);BS.ge.setHex(0x0A0820);BS.wc.setHex(0x4444AA);BS.rc.setHex(0x4444CC);BS.hc.setHex(0xC8FF00);BS.pulse=false;}
+  else if(s==='waiting'){BS.tRot=.009;BS.l1c.setHex(0x6655AA);BS.l1i=2.5;BS.l2c.setHex(0x2233AA);BS.l2i=2;BS.l3i=0;BS.gc.setHex(0x030310);BS.ge.setHex(0x060618);BS.wc.setHex(0x222266);BS.rc.setHex(0x222288);BS.hc.setHex(0x4444AA);BS.pulse=true;}
+  else if(s==='go')     {BS.tRot=.032;BS.l1c.setHex(0xC8FF00);BS.l1i=12;BS.l2c.setHex(0xAAFF00);BS.l2i=8;BS.l3i=0;BS.gc.setHex(0x1A2200);BS.ge.setHex(0x243200);BS.wc.setHex(0x88BB00);BS.rc.setHex(0x99CC00);BS.hc.setHex(0xC8FF00);BS.pulse=false;BS.burst=true;BS.bT=0;}
+  else if(s==='early')  {BS.tRot=.002;BS.l1c.setHex(0xFF3D5A);BS.l1i=8;BS.l2c.setHex(0xFF0000);BS.l2i=5;BS.l3i=7;bL3.color.setHex(0xFF3D5A);BS.gc.setHex(0x1A0008);BS.ge.setHex(0x0E0004);BS.wc.setHex(0xFF2244);BS.rc.setHex(0x440010);BS.hc.setHex(0xFF3D5A);BS.pulse=false;}
+  else if(s==='result') {BS.tRot=.012;BS.l1c.setHex(0x00E5FF);BS.l1i=6;BS.l2c.setHex(0x0088BB);BS.l2i=4;BS.l3i=0;BS.gc.setHex(0x001A22);BS.ge.setHex(0x000E18);BS.wc.setHex(0x0088AA);BS.rc.setHex(0x0055AA);BS.hc.setHex(0x00E5FF);BS.pulse=false;}
 }
 
-function syncBox() {
-  const box = document.getElementById('click-box');
-  const w = box.clientWidth, h = box.clientHeight;
-  bR.setSize(w, h);
-  bCam.aspect = w / h;
-  bCam.updateProjectionMatrix();
+function syncBox(){const b=document.getElementById('click-box');const w=b.clientWidth,h=b.clientHeight;bR.setSize(w,h);bCam.aspect=w/h;bCam.updateProjectionMatrix();}
+syncBox(); window.addEventListener('resize',syncBox);
+
+const bClk=new THREE.Clock();
+function aBox(){
+  requestAnimationFrame(aBox);const t=bClk.getElapsedTime();
+  BS.rot+=(BS.tRot-BS.rot)*.04;
+  if(BS.burst){BS.bT+=.04;if(BS.bT>1)BS.burst=false;}
+  const rm=BS.burst?1+Math.sin(BS.bT*Math.PI)*2.5:1;
+  gMesh.rotation.y+=BS.rot*rm;gMesh.rotation.x+=BS.rot*.3*rm;
+  igMesh.rotation.y=gMesh.rotation.y*.85;igMesh.rotation.x=gMesh.rotation.x*.85;
+  wMesh.rotation.y=gMesh.rotation.y+.15;wMesh.rotation.x=gMesh.rotation.x+.08;
+  if(BS.burst){const s=1+Math.sin(BS.bT*Math.PI)*.28;gMesh.scale.setScalar(s);igMesh.scale.setScalar(.78*s);wMesh.scale.setScalar(s*1.005);}
+  else if(BS.pulse){const ps=1+Math.sin(t*2)*.04;gMesh.scale.setScalar(ps);igMesh.scale.setScalar(.78*ps);wMesh.scale.setScalar(ps*1.005);}
+  else{const br=1+Math.sin(t*.7)*.012;gMesh.scale.setScalar(br);igMesh.scale.setScalar(.78*br);wMesh.scale.setScalar(br*1.005);}
+  rg1.rotation.z+=.004;rg1.rotation.y+=.0015;rg2.rotation.z-=.005;rg2.rotation.x+=.002;rg3.rotation.y+=.003;rg3.rotation.z+=.002;
+  const hp=hGeo.attributes.position.array;
+  for(let i=0;i<hN;i++){hAng[i]+=hSpd[i]*(BS.burst?4:1);const tl=hTlt[i],r=hRad[i],a=hAng[i];hp[i*3]=r*Math.cos(a);hp[i*3+1]=r*Math.sin(a)*Math.sin(tl);hp[i*3+2]=r*Math.sin(a)*Math.cos(tl);}
+  hGeo.attributes.position.needsUpdate=true;
+  bCam.position.x=Math.sin(t*.18)*.45;bCam.position.y=Math.cos(t*.14)*.28;bCam.lookAt(0,0,0);
+  gMat.color.lerp(BS.gc,.07);gMat.emissive.lerp(BS.ge,.07);wMat.color.lerp(BS.wc,.08);
+  [rg1,rg2,rg3].forEach(r=>r.material.color.lerp(BS.rc,.06));hMat.color.lerp(BS.hc,.08);
+  bL1.color.lerp(BS.l1c,.09);bL1.intensity+=(BS.l1i-bL1.intensity)*.09;
+  bL2.color.lerp(BS.l2c,.09);bL2.intensity+=(BS.l2i-bL2.intensity)*.09;
+  bL3.intensity+=(BS.l3i-bL3.intensity)*.09;
+  bR.render(bScene,bCam);
 }
-syncBox();
-window.addEventListener('resize', syncBox);
+aBox();
 
-const bClock = new THREE.Clock();
-
-function animateBox() {
-  requestAnimationFrame(animateBox);
-  const t = bClock.getElapsedTime();
-
-  BS.rotSpeed += (BS.targetRotSpeed - BS.rotSpeed) * 0.04;
-
-  // ── Burst ──
-  if (BS.burstActive) {
-    BS.burstTime += 0.04;
-    if (BS.burstTime > 1) BS.burstActive = false;
-  }
-
-  // ── Rotate gem ──
-  const rotMult = BS.burstActive ? 1 + Math.sin(BS.burstTime * Math.PI) * 2.5 : 1;
-  gemMesh.rotation.y  += BS.rotSpeed * rotMult;
-  gemMesh.rotation.x  += BS.rotSpeed * 0.3 * rotMult;
-  innerGem.rotation.y  = gemMesh.rotation.y * 0.85;
-  innerGem.rotation.x  = gemMesh.rotation.x * 0.85;
-  gemWire.rotation.y   = gemMesh.rotation.y + 0.15;
-  gemWire.rotation.x   = gemMesh.rotation.x + 0.08;
-
-  // ── Scale ──
-  if (BS.burstActive) {
-    const s = 1 + Math.sin(BS.burstTime * Math.PI) * 0.28;
-    gemMesh.scale.setScalar(s);
-    innerGem.scale.setScalar(0.78 * s);
-    gemWire.scale.setScalar(s * 1.005);
-  } else if (BS.pulseActive) {
-    const ps = 1 + Math.sin(t * 2.0) * 0.04;
-    gemMesh.scale.setScalar(ps);
-    innerGem.scale.setScalar(0.78 * ps);
-    gemWire.scale.setScalar(ps * 1.005);
-  } else {
-    // Gentle breathe
-    const breathe = 1 + Math.sin(t * 0.7) * 0.012;
-    gemMesh.scale.setScalar(breathe);
-    innerGem.scale.setScalar(0.78 * breathe);
-    gemWire.scale.setScalar(breathe * 1.005);
-  }
-
-  // ── Orbit rings ──
-  ring1.rotation.z += 0.004;
-  ring1.rotation.y += 0.0015;
-  ring2.rotation.z -= 0.005;
-  ring2.rotation.x += 0.002;
-  ring3.rotation.y += 0.003;
-  ring3.rotation.z += 0.002;
-
-  // ── Halo particles: orbit around gem ──
-  const hPosArr = haloGeo.attributes.position.array;
-  for (let i = 0; i < hCount; i++) {
-    hAngles[i] += hSpeeds[i] * (BS.burstActive ? 4 : 1);
-    const tilt = hTilts[i];
-    const r = hRadii[i];
-    const a = hAngles[i];
-    hPosArr[i * 3]     = r * Math.cos(a);
-    hPosArr[i * 3 + 1] = r * Math.sin(a) * Math.sin(tilt);
-    hPosArr[i * 3 + 2] = r * Math.sin(a) * Math.cos(tilt);
-  }
-  haloGeo.attributes.position.needsUpdate = true;
-
-  // ── Camera drift ──
-  bCam.position.x = Math.sin(t * 0.18) * 0.45;
-  bCam.position.y = Math.cos(t * 0.14) * 0.28;
-  bCam.lookAt(0, 0, 0);
-
-  // ── Lerp materials ──
-  gemMat.color.lerp(BS.gemCol, 0.07);
-  gemMat.emissive.lerp(BS.gemEmi, 0.07);
-  gemWireMat.color.lerp(BS.wireCol, 0.08);
-  [ring1, ring2, ring3].forEach(r => r.material.color.lerp(BS.ringCol, 0.06));
-  haloMat.color.lerp(BS.haloCol, 0.08);
-
-  // ── Lerp lights ──
-  bL1.color.lerp(BS.l1Col, 0.09);
-  bL1.intensity += (BS.l1Int - bL1.intensity) * 0.09;
-  bL2.color.lerp(BS.l2Col, 0.09);
-  bL2.intensity += (BS.l2Int - bL2.intensity) * 0.09;
-  bL3.intensity += (BS.l3Int - bL3.intensity) * 0.09;
-
-  bR.render(bScene, bCam);
-}
-animateBox();
-
-
-/* ═══════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════
    GAME LOGIC
-═══════════════════════════════════════════════════ */
-let gameState = 'idle';
-let startTime = null;
-let waitTimeout = null;
-let results = [];
+═══════════════════════════════════════════════ */
+let gs='intro', t0=null, wt=null, results=[];
 
-// Audio context (Web Audio API — no files needed)
-let audioCtx = null;
-function getAudio() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  return audioCtx;
+// ── Audio ──
+let ac=null;
+function gAC(){if(!ac)ac=new(window.AudioContext||window.webkitAudioContext)();return ac;}
+function note(f,st,d,pk,ctx){
+  const o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);
+  o.type='sine';o.frequency.setValueAtTime(f,st);g.gain.setValueAtTime(.001,st);g.gain.linearRampToValueAtTime(pk,st+.012);g.gain.exponentialRampToValueAtTime(.001,st+d);o.start(st);o.stop(st+d+.01);
+  const o2=ctx.createOscillator(),g2=ctx.createGain();o2.connect(g2);g2.connect(ctx.destination);
+  o2.type='sine';o2.frequency.setValueAtTime(f,st+.06);g2.gain.setValueAtTime(.001,st+.06);g2.gain.linearRampToValueAtTime(pk*.22,st+.075);g2.gain.exponentialRampToValueAtTime(.001,st+.06+d*1.4);o2.start(st+.06);o2.stop(st+.06+d*1.4+.02);
 }
-
-// Core: play a single sine tone with smooth attack + exponential decay
-// Optionally adds a subtle reverb tail via a second delayed, quieter copy
-function playNote(freq, startTime, duration, peak, ctx) {
-  const osc  = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(freq, startTime);
-  // Smooth attack (5ms), then exponential release
-  gain.gain.setValueAtTime(0.001, startTime);
-  gain.gain.linearRampToValueAtTime(peak, startTime + 0.012);
-  gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-  osc.start(startTime);
-  osc.stop(startTime + duration + 0.01);
-  // Gentle reverb echo — same note, quieter, delayed
-  const osc2  = ctx.createOscillator();
-  const gain2 = ctx.createGain();
-  osc2.connect(gain2);
-  gain2.connect(ctx.destination);
-  osc2.type = 'sine';
-  osc2.frequency.setValueAtTime(freq, startTime + 0.06);
-  gain2.gain.setValueAtTime(0.001, startTime + 0.06);
-  gain2.gain.linearRampToValueAtTime(peak * 0.22, startTime + 0.075);
-  gain2.gain.exponentialRampToValueAtTime(0.001, startTime + 0.06 + duration * 1.4);
-  osc2.start(startTime + 0.06);
-  osc2.stop(startTime + 0.06 + duration * 1.4 + 0.02);
-}
-
-function soundStart() {
-  // Calm two-note descending chime — like a doorbell in a gallery
-  // Notes: E4 → B3  (a perfect fifth, down)
+function sStart(){try{const c=gAC(),t=c.currentTime;note(329.63,t,.55,.10,c);note(246.94,t+.18,.65,.08,c);}catch(e){}}
+function sGo(){try{const c=gAC(),t=c.currentTime;note(523.25,t,.7,.13,c);note(783.99,t+.04,.5,.06,c);}catch(e){}}
+function sResult(ms){try{const c=gAC(),t=c.currentTime;if(ms<300){note(261.63,t,.6,.09,c);note(329.63,t+.12,.6,.08,c);note(392,t+.24,.8,.07,c);}else{note(220,t,.8,.09,c);note(261.63,t+.2,.7,.05,c);}}catch(e){}}
+function sEarly(){
+  // Soft single dampened thud — low sine, very short, very quiet
   try {
-    const ctx = getAudio();
-    const t = ctx.currentTime;
-    playNote(329.63, t,        0.55, 0.10, ctx); // E4
-    playNote(246.94, t + 0.18, 0.65, 0.08, ctx); // B3
-  } catch(e) {}
+    const c=gAC(), t=c.currentTime;
+    const o=c.createOscillator(), g=c.createGain();
+    o.connect(g); g.connect(c.destination);
+    o.type='sine'; o.frequency.setValueAtTime(180, t);
+    o.frequency.exponentialRampToValueAtTime(90, t+0.18);
+    g.gain.setValueAtTime(0.001, t);
+    g.gain.linearRampToValueAtTime(0.055, t+0.008);
+    g.gain.exponentialRampToValueAtTime(0.001, t+0.22);
+    o.start(t); o.stop(t+0.25);
+  } catch(e){}
 }
 
-function soundGo() {
-  // Single clean crystal bell — C5, pure and clear
-  // Higher, brief, no cluster noise
-  try {
-    const ctx = getAudio();
-    const t = ctx.currentTime;
-    playNote(523.25, t,        0.7, 0.13, ctx); // C5
-    playNote(783.99, t + 0.04, 0.5, 0.06, ctx); // G5 — soft harmonic shimmer
-  } catch(e) {}
+// ── DOM ──
+const cBox  = document.getElementById('click-box');
+const iOver = document.getElementById('intro-overlay');
+const ish   = document.getElementById('ish');
+const bLbl  = document.getElementById('box-lbl');
+const bHint = document.getElementById('box-hint');
+const rMs   = document.getElementById('result-ms');
+const rUnit = document.getElementById('result-unit');
+const rBadge= document.getElementById('rating-badge');
+const sAvg  = document.getElementById('stat-avg');
+const sBest = document.getElementById('stat-best');
+const sRuns = document.getElementById('stat-runs');
+const fEl   = document.getElementById('flash');
+const bStart= document.getElementById('btn-start');
+const bReset= document.getElementById('btn-reset');
+const bMenu = document.getElementById('btn-menu');
+
+// Scroll hint hides once user scrolls
+iOver.addEventListener('scroll',()=>{ ish.classList.toggle('hide', iOver.scrollTop>60); },{passive:true});
+
+function setSBtn(l,c){bStart.textContent=l;bStart.className=c;}
+function doFlash(col){fEl.style.background=col;fEl.classList.add('active');setTimeout(()=>fEl.classList.remove('active'),100);}
+
+function rate(ms){
+  if(ms<150)return{l:'⚡ Superhuman',c:'#C8FF00'};
+  if(ms<200)return{l:'🎯 Amazing',c:'#C8FF00'};
+  if(ms<250)return{l:'🔥 Very Good',c:'#00E5FF'};
+  if(ms<300)return{l:'👊 Good',c:'#00E5FF'};
+  if(ms<380)return{l:'😐 Average',c:'#F0F0F5'};
+  if(ms<500)return{l:'🐢 Below Avg',c:'#6B6B80'};
+  return{l:'☕ Needs Coffee',c:'#FF3D5A'};
 }
 
-function soundResult(ms) {
-  // Fast result: ascending three-note crystal arpeggio — C4 → E4 → G4 (major triad)
-  // Slow result: single soft low note — A3, gentle resolution
-  try {
-    const ctx = getAudio();
-    const t = ctx.currentTime;
-    if (ms < 300) {
-      playNote(261.63, t,        0.6, 0.09, ctx); // C4
-      playNote(329.63, t + 0.12, 0.6, 0.08, ctx); // E4
-      playNote(392.00, t + 0.24, 0.8, 0.07, ctx); // G4
-    } else {
-      playNote(220.00, t,        0.8, 0.09, ctx); // A3 — warm, calm
-      playNote(261.63, t + 0.2,  0.7, 0.05, ctx); // C4 — soft resolution
-    }
-  } catch(e) {}
+function updScoreBar(ms) {
+  const track   = document.getElementById('score-bar-track');
+  const marker  = document.getElementById('score-bar-marker');
+  const diamond = document.getElementById('sbm-diamond');
+  const tick    = document.getElementById('sbm-tick');
+  const label   = document.getElementById('sbm-label');
+
+  // Map ms → 0%–100% position (100ms = rightmost, 600ms = leftmost)
+  const pct = Math.max(0, Math.min(100, ((600 - ms) / 500) * 100));
+
+  track.classList.add('active');
+  marker.classList.add('visible');
+  marker.style.left = pct + '%';
+
+  // Zone color + label
+  let col, tier;
+  if      (ms < 150) { col = '#E8FF80'; tier = 'Superhuman'; }
+  else if (ms < 200) { col = '#C8FF00'; tier = 'Amazing'; }
+  else if (ms < 250) { col = '#00E5FF'; tier = 'Very Good'; }
+  else if (ms < 300) { col = '#00CCDD'; tier = 'Good'; }
+  else if (ms < 380) { col = '#CCCCDD'; tier = 'Average'; }
+  else if (ms < 500) { col = '#A0A0B5'; tier = 'Below Avg'; }
+  else               { col = '#FF3D5A'; tier = 'Needs Coffee'; }
+
+  diamond.style.background = col;
+  diamond.style.boxShadow  = `0 0 0 3px ${col}28, 0 0 14px ${col}88`;
+  diamond.style.borderColor = 'rgba(0,0,0,.35)';
+  tick.style.background    = col + '60';
+  label.textContent        = tier;
+  label.style.color        = col;
 }
 
-function soundEarly() {
-  // Soft low two-note descent — not harsh, just gently wrong
-  // D3 → A2 — a quiet "oh no" rather than a buzzer
-  try {
-    const ctx = getAudio();
-    const t = ctx.currentTime;
-    playNote(146.83, t,        0.45, 0.09, ctx); // D3
-    playNote(110.00, t + 0.16, 0.55, 0.07, ctx); // A2
-  } catch(e) {}
+function updStats(){
+  if(!results.length)return;
+  const avg=Math.round(results.reduce((a,b)=>a+b,0)/results.length);
+  const best=Math.min(...results);
+  sAvg.textContent=avg;sBest.textContent=best;sRuns.textContent=results.length;
 }
 
-// DOM refs
-const clickBox      = document.getElementById('click-box');
-const introModal    = document.getElementById('intro-modal');
-const scrollHint    = document.getElementById('scroll-hint');
-const boxStateLbl   = document.getElementById('box-state-label');
-const boxActionHint = document.getElementById('box-action-hint');
-const resultMs      = document.getElementById('result-ms');
-const resultLabel   = document.getElementById('result-label');
-const ratingBadge   = document.getElementById('rating-badge');
-const statAvg       = document.getElementById('stat-avg');
-const statBest      = document.getElementById('stat-best');
-const statAttempts  = document.getElementById('stat-attempts');
-const historyPills  = document.getElementById('history-pills');
-const attemptsLabel = document.getElementById('attempts-label');
-const flash         = document.getElementById('flash');
-const btnStart      = document.getElementById('btn-start');
-const btnReset      = document.getElementById('btn-reset');
-const btnMenu       = document.getElementById('btn-menu');
-
-function showMenu() {
-  // Pause any active game
-  if (gameState === 'waiting' || gameState === 'go') {
-    clearTimeout(waitTimeout);
-    setBoxState('idle');
-    clickBox.className = 'state-idle';
-    gameState = 'idle';
-    setBtnStart('START', '');
-    boxStateLbl.textContent = '';
-    boxActionHint.textContent = '';
-  }
-  introModal.classList.remove('hidden');
-  introModal.scrollTo({ top: 0, behavior: 'smooth' });
-  scrollHint.classList.remove('hide');
-  btnMenu.classList.remove('visible');
+function resetStats(){
+  if(gs==='waiting'||gs==='go'){clearTimeout(wt);setBS('idle');cBox.className='state-idle';gs='idle';}
+  results=[];sAvg.textContent='—';sBest.textContent='—';sRuns.textContent='0';
+  rMs.textContent='—';rMs.style.color='';rUnit.textContent='milliseconds';
+  rBadge.textContent='Awaiting result';rBadge.style.color='';
+  document.getElementById('stat-result-block').className='';
+  document.getElementById('score-bar-track').classList.remove('active');
+  const m=document.getElementById('score-bar-marker');
+  m.classList.remove('visible');
+  document.getElementById('sbm-label').textContent='';
+  document.getElementById('sbm-diamond').style.cssText='';
+  document.getElementById('sbm-tick').style.background='';
+  setSBtn('START','');bLbl.textContent='';bHint.textContent='';
+  bReset.textContent='✓ CLEARED';setTimeout(()=>{bReset.textContent='RESET';},1200);
 }
 
-function startFromIntro() {
-  introModal.classList.add('hidden');
-  scrollHint.classList.add('hide');
-  btnMenu.classList.add('visible');
-  toWaiting();
+function dismissIntro(){
+  iOver.classList.add('hidden');
+  bMenu.classList.add('visible');
 }
-
-// Hide scroll hint when user scrolls down
-introModal.addEventListener('scroll', () => {
-  if (introModal.scrollTop > 50) scrollHint.classList.add('hide');
-  else scrollHint.classList.remove('hide');
-}, { passive: true });
-
-// Legend rows
-const legendIds = [
-  { id: 'leg-amazing', test: ms => ms < 200 },
-  { id: 'leg-good',    test: ms => ms >= 200 && ms < 300 },
-  { id: 'leg-avg',     test: ms => ms >= 300 && ms < 380 },
-  { id: 'leg-below',   test: ms => ms >= 380 && ms < 500 },
-  { id: 'leg-slow',    test: ms => ms >= 500 },
-];
-
-function highlightLegend(ms) {
-  legendIds.forEach(({ id, test }) => {
-    const el = document.getElementById(id);
-    if (el) el.classList.toggle('active', test(ms));
-  });
-}
-function clearLegend() {
-  legendIds.forEach(({ id }) => {
-    const el = document.getElementById(id);
-    if (el) el.classList.remove('active');
-  });
-}
-
-function getRating(ms) {
-  if (ms < 150) return { label: '⚡ Superhuman',    color: '#C8FF00' };
-  if (ms < 200) return { label: '🎯 Amazing',       color: '#C8FF00' };
-  if (ms < 250) return { label: '🔥 Very Good',     color: '#00E5FF' };
-  if (ms < 300) return { label: '👊 Good',          color: '#00E5FF' };
-  if (ms < 380) return { label: '😐 Average',       color: '#F0F0F5' };
-  if (ms < 500) return { label: '🐢 Below Average', color: '#6B6B80' };
-  return               { label: '☕ Needs Coffee',   color: '#FF3D5A' };
-}
-
-function doFlash(color) {
-  flash.style.background = color;
-  flash.classList.add('active');
-  setTimeout(() => flash.classList.remove('active'), 100);
-}
-
-function setBtnStart(label, cls) {
-  btnStart.textContent = label;
-  btnStart.className = cls;
-}
-
-function updateStats() {
-  if (!results.length) return;
-  const avg  = Math.round(results.reduce((a, b) => a + b, 0) / results.length);
-  const best = Math.min(...results);
-  statAvg.textContent       = avg;
-  statBest.textContent      = best;
-  statAttempts.textContent  = results.length;
-  attemptsLabel.textContent = `${results.length} run${results.length !== 1 ? 's' : ''} this session`;
-
-  historyPills.innerHTML = '';
-  [...results].reverse().slice(0, 5).forEach(val => {
-    const p = document.createElement('div');
-    p.className = `history-pill${val < 300 ? ' fast' : ''}`;
-    p.textContent = val;
-    historyPills.appendChild(p);
-  });
-}
-
-function resetStats() {
-  if (gameState === 'waiting' || gameState === 'go') {
-    clearTimeout(waitTimeout);
-    setBoxState('idle');
-    clickBox.className = 'state-idle';
-    gameState = 'idle';
-  }
-  results = [];
-  statAvg.textContent      = '—';
-  statBest.textContent     = '—';
-  statAttempts.textContent = '0';
-  attemptsLabel.textContent = '';
-  historyPills.innerHTML   = '';
-  resultMs.textContent     = '—';
-  resultMs.style.color     = '';
-  resultLabel.textContent  = 'milliseconds';
-  ratingBadge.textContent  = 'Awaiting result';
-  ratingBadge.style.borderColor = '';
-  ratingBadge.style.color  = '';
-  clearLegend();
-  setBtnStart('START', '');
-  boxStateLbl.textContent  = '';
-  boxActionHint.textContent = '';
-  btnReset.textContent = '✓ CLEARED';
-  setTimeout(() => { btnReset.textContent = 'RESET STATS'; }, 1200);
-}
-
-function toWaiting() {
-  gameState = 'waiting';
-  setBoxState('waiting');
-  clickBox.className = 'state-waiting';
-  boxStateLbl.textContent = 'GET READY...';
-  boxStateLbl.style.color = '';
-  boxActionHint.textContent = 'WAIT';
-  boxActionHint.style.color = 'var(--muted)';
-  setBtnStart('WAITING...', 'btn-waiting');
-  btnMenu.classList.add('visible');
-  clearLegend();
-  soundStart();
-  waitTimeout = setTimeout(toGo, 1500 + Math.random() * 2500);
-}
-
-function toGo() {
-  gameState = 'go';
-  setBoxState('go');
-  clickBox.className = 'state-go';
-  startTime = performance.now();
-  doFlash('#C8FF00');
-  boxStateLbl.textContent = 'NOW!';
-  boxStateLbl.style.color = '#C8FF00';
-  boxActionHint.textContent = 'CLICK!';
-  boxActionHint.style.color = '#C8FF00';
-  setBtnStart('CLICK!', 'btn-go');
-  soundGo();
-}
-
-function toEarly() {
-  gameState = 'early';
-  setBoxState('early');
-  clickBox.className = 'state-early';
-  clearTimeout(waitTimeout);
-  doFlash('#FF3D5A');
-  boxStateLbl.textContent = 'TOO SOON!';
-  boxStateLbl.style.color = '#FF3D5A';
-  boxActionHint.textContent = 'TRY AGAIN';
-  boxActionHint.style.color = '#FF3D5A';
-  ratingBadge.textContent = '🚫 Jumped the gun';
-  ratingBadge.style.borderColor = '#FF3D5A';
-  ratingBadge.style.color = '#FF3D5A';
-  setBtnStart('TOO SOON — TRY AGAIN', 'btn-early');
-  clearLegend();
-  soundEarly();
-}
-
-function toResult() {
-  const elapsed = Math.round(performance.now() - startTime);
-  gameState = 'result';
-  setBoxState('result');
-  clickBox.className = 'state-result';
-  results.push(elapsed);
-
-  if (elapsed < 300) doFlash('#00E5FF');
-
-  const rating = getRating(elapsed);
-  const isPB = results.length > 1 && elapsed === Math.min(...results);
-
-  resultMs.textContent = elapsed;
-  resultMs.style.color = elapsed < 300 ? '#00E5FF' : elapsed < 380 ? '#F0F0F5' : '#6B6B80';
-  resultLabel.textContent = isPB ? '🏆 Personal Best!' : 'milliseconds';
-
-  ratingBadge.textContent = rating.label;
-  ratingBadge.style.borderColor = rating.color;
-  ratingBadge.style.color = rating.color;
-
-  boxStateLbl.textContent = isPB ? 'PERSONAL BEST!' : 'RESULT';
-  boxStateLbl.style.color = isPB ? '#C8FF00' : '';
-  boxActionHint.textContent = `${elapsed} ms`;
-  boxActionHint.style.color = resultMs.style.color;
-
-  setBtnStart('PLAY AGAIN', 'btn-result');
-  highlightLegend(elapsed);
-  updateStats();
-  soundResult(elapsed);
-}
-
-function handleAction() {
-  // If menu is open, close it and start
-  if (!introModal.classList.contains('hidden')) {
-    startFromIntro();
+function showIntro(){
+  // Toggle: if intro already open, close it and resume game
+  if(!iOver.classList.contains('hidden')){
+    iOver.classList.add('hidden');
+    bMenu.classList.add('visible');
+    if(gs==='intro') gs='idle';
     return;
   }
-  switch (gameState) {
-    case 'idle': case 'result': case 'early': toWaiting(); break;
-    case 'waiting': toEarly(); break;
-    case 'go': toResult(); break;
+  // Cancel any active round
+  if(gs==='waiting'||gs==='go'){
+    clearTimeout(wt);setBS('idle');cBox.className='state-idle';
+    setSBtn('START','');bLbl.textContent='';bHint.textContent='';
+  }
+  iOver.classList.remove('hidden');
+  iOver.scrollTo({top:0,behavior:'smooth'});
+  ish.classList.remove('hide');
+  bMenu.classList.remove('visible');
+  gs='intro';
+}
+
+function toWaiting(){
+  gs='waiting';setBS('waiting');cBox.className='state-waiting';
+  bLbl.textContent='GET READY...';bLbl.style.color='';
+  bHint.textContent='WAIT';bHint.style.color='var(--muted)';
+  setSBtn('WAITING...','bw');sStart();
+  wt=setTimeout(toGo,1500+Math.random()*2500);
+}
+function toGo(){
+  gs='go';setBS('go');cBox.className='state-go';t0=performance.now();
+  doFlash('#C8FF00');bLbl.textContent='NOW!';bLbl.style.color='#C8FF00';
+  bHint.textContent='CLICK!';bHint.style.color='#C8FF00';setSBtn('CLICK!','bg');sGo();
+}
+function toEarly(){
+  gs='early';setBS('early');cBox.className='state-early';clearTimeout(wt);
+  doFlash('#FF3D5A');bLbl.textContent='TOO SOON!';bLbl.style.color='#FF3D5A';
+  bHint.textContent='TRY AGAIN';bHint.style.color='#FF3D5A';
+  rBadge.textContent='🚫 Jumped the gun'; rBadge.style.color='#FF3D5A';
+  setSBtn('TOO SOON — TRY AGAIN','be');sEarly();
+}
+function toResult(){
+  const el=Math.round(performance.now()-t0);
+  gs='result';setBS('result');cBox.className='state-result';results.push(el);
+  if(el<300)doFlash('#00E5FF');
+  const r=rate(el),isPB=results.length>1&&el===Math.min(...results);
+  rMs.textContent=el;
+  rMs.style.color=el<300?'#00E5FF':el<380?'#F0F0F5':'#6B6B80';
+  rUnit.textContent=isPB?'🏆 Personal Best!':'milliseconds';
+  rBadge.textContent=r.l; rBadge.style.color=r.c;
+  // Color accent stripe on result block
+  const rb=document.getElementById('stat-result-block');
+  rb.className=''; // clear
+  if(el<250) rb.classList.add('c-accent');
+  else if(el<380) rb.classList.add('c-success');
+  else rb.classList.add('c-danger');
+  bLbl.textContent=isPB?'PERSONAL BEST!':'RESULT';bLbl.style.color=isPB?'#C8FF00':'';
+  bHint.textContent=el+' ms';bHint.style.color=rMs.style.color;
+  setSBtn('PLAY AGAIN','br');updStats();updScoreBar(el);sResult(el);
+}
+
+function act(){
+  if(gs==='intro'){dismissIntro();toWaiting();return;}
+  switch(gs){
+    case 'idle':case 'result':case 'early':toWaiting();break;
+    case 'waiting':toEarly();break;
+    case 'go':toResult();break;
   }
 }
 
+// ── Event listeners ──
+cBox.addEventListener('click', act);
+bStart.addEventListener('click', act);
+bReset.addEventListener('click', resetStats);
+bMenu.addEventListener('click', showIntro);
 document.addEventListener('keydown', e => {
-  if (e.code === 'Space') { e.preventDefault(); handleAction(); }
-  if (e.code === 'Escape' && gameState !== 'intro') { showMenu(); }
+  if(e.code==='Space'){e.preventDefault();act();}
+  if(e.code==='Escape') showIntro();
 });
 
-// Init — show modal, gem animates behind
-setBoxState('idle');
-clickBox.className = 'state-idle';
-boxStateLbl.textContent = '';
-boxActionHint.textContent = '';
-setBtnStart('START', '');
+// ── Init ──
+setBS('idle'); cBox.className='state-idle'; setSBtn('START','');
 </script>
 </body>
 </html>
